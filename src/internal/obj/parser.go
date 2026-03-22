@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"tucil/src/internal/model"
@@ -12,11 +11,7 @@ import (
 
 // ReadFile reads the content of a file given its path and returns it as a string.
 func ReadFile(filePath string) (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	f, err := os.Open(filepath.Join(dir, filePath))
+	f, err := os.Open(filePath)
 
 	if err != nil {
 		return "", err
@@ -53,6 +48,10 @@ func ParseOBJ(content string) (*model.Object, error) {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
+		}
+
+		if strings.Contains(line, "#") {
+			line = line[:strings.Index(line, "#")]
 		}
 
 		parts := strings.Fields(line)

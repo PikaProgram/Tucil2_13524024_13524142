@@ -2,38 +2,23 @@ package main
 
 import (
 	"os"
-	"tucil/src/internal/obj"
+	"tucil/src/internal/cli"
 )
 
 func main() {
-	args := os.Args[1:]
-
-	res, err := obj.ReadFile(args[0])
-	if err != nil {
-		panic(err)
+	if len(os.Args) < 2 {
+		println("Valid commands:")
+		println("  convert <input.obj> <maxDepth> [output.obj]")
+		return
 	}
 
-	object, err := obj.ParseOBJ(res)
-	if err != nil {
-		panic(err)
-	}
+	cmd := os.Args[1]
+	args := os.Args[2:]
 
-	box, err := object.GetBoundingBox()
-	if err != nil {
-		panic(err)
+	switch cmd {
+	case "convert":
+		cli.Convert(args)
+	default:
+		println("Unknown command:", cmd)
 	}
-	println("Bounding Box:")
-	println("Min:", box.Min.X, box.Min.Y, box.Min.Z)
-	println("Max:", box.Max.X, box.Max.Y, box.Max.Z)
-	println("Center:", box.Center.X, box.Center.Y, box.Center.Z)
-
-	rootCube, err := box.GetRootCube()
-	if err != nil {
-		panic(err)
-	}
-	println("Root Cube:")
-	println("Min:", rootCube.Min.X, rootCube.Min.Y, rootCube.Min.Z)
-	println("Max:", rootCube.Max.X, rootCube.Max.Y, rootCube.Max.Z)
-	println("Center:", rootCube.Center.X, rootCube.Center.Y, rootCube.Center.Z)
-	println("Size:", rootCube.Size)
 }
