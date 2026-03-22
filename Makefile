@@ -9,13 +9,10 @@ LDFLAGS		 	:= -w -s
 # Define phony targets
 .PHONY: all build clean 
 
-all: clean build run
+all: clean build
 
 build: 
 	$(GO) build $(GOFLAGS) -ldflags="$(LDFLAGS)" -o $(TARGET) $(SRC_DIR)/main.go
 
 clean:
 	rm -f $(TARGET)
-
-run: 
-	./$(TARGET) test/input/cow.obj

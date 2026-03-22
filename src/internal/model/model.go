@@ -1,6 +1,9 @@
 package model
 
-import "errors"
+import (
+	"errors"
+	"math"
+)
 
 type Vertex struct {
 	X, Y, Z float64
@@ -167,9 +170,93 @@ func (c *Cube) intersectTriangle(v1, v2, v3 Vertex) bool {
 		Z: max(max(v1.Z, v2.Z), v3.Z),
 	}
 
-	return !(tMax.X < bMin.X || tMin.X > bMax.X ||
+	// AABB check
+	if tMax.X < bMin.X || tMin.X > bMax.X ||
 		tMax.Y < bMin.Y || tMin.Y > bMax.Y ||
-		tMax.Z < bMin.Z || tMin.Z > bMax.Z)
+		tMax.Z < bMin.Z || tMin.Z > bMax.Z {
+		return false
+	}
+
+	half := Vertex{
+		X: (bMax.X - bMin.X) / 2,
+		Y: (bMax.Y - bMin.Y) / 2,
+		Z: (bMax.Z - bMin.Z) / 2,
+	}
+
+	center := Vertex{
+		X: (bMin.X + bMax.X) / 2,
+		Y: (bMin.Y + bMax.Y) / 2,
+		Z: (bMin.Z + bMax.Z) / 2,
+	}
+
+	v1 = Vertex{X: v1.X - center.X, Y: v1.Y - center.Y, Z: v1.Z - center.Z}
+	v2 = Vertex{X: v2.X - center.X, Y: v2.Y - center.Y, Z: v2.Z - center.Z}
+	v3 = Vertex{X: v3.X - center.X, Y: v3.Y - center.Y, Z: v3.Z - center.Z}
+
+	e0 := Vertex{X: v2.X - v1.X, Y: v2.Y - v1.Y, Z: v2.Z - v1.Z}
+	e1 := Vertex{X: v3.X - v2.X, Y: v3.Y - v2.Y, Z: v3.Z - v2.Z}
+	e2 := Vertex{X: v1.X - v3.X, Y: v1.Y - v3.Y, Z: v1.Z - v3.Z}
+
+	axes := []Vertex{
+		{X: 0, Y: -e0.Z, Z: e0.Y},
+		{X: 0, Y: -e1.Z, Z: e1.Y},
+		{X: 0, Y: -e2.Z, Z: e2.Y},
+		{X: e0.Z, Y: 0, Z: -e0.X},
+		{X: e1.Z, Y: 0, Z: -e1.X},
+		{X: e2.Z, Y: 0, Z: -e2.X},
+		{X: -e0.Y, Y: e0.X, Z: 0},
+		{X: -e1.Y, Y: e1.X, Z: 0},
+		{X: -e2.Y, Y: e2.X, Z: 0},
+	}
+
+	// 9 Axis test
+	for _, axis := range axes {
+		// Skip near-zero so math doesn't get mad
+		if math.Abs(axis.X) < 1e-12 && math.Abs(axis.Y) < 1e-12 && math.Abs(axis.Z) < 1e-12 {
+			continue
+		}
+
+		p1 := v1.X*axis.X + v1.Y*axis.Y + v1.Z*axis.Z
+		p2 := v2.X*axis.X + v2.Y*axis.Y + v2.Z*axis.Z
+		p3 := v3.X*axis.X + v3.Y*axis.Y + v3.Z*axis.Z
+
+		r := half.X*math.Abs(axis.X) + half.Y*math.Abs(axis.Y) + half.Z*math.Abs(axis.Z)
+
+		if max(max(p1, p2), p3) < -r || min(min(p1, p2), p3) > r {
+			return false
+		}
+	}
+
+	// AABB test for triangle vertices against cube half-size
+	if (max(max(v1.X, v2.X), v3.X) < -half.X || min(min(v1.X, v2.X), v3.X) > half.X) ||
+		(max(max(v1.Y, v2.Y), v3.Y) < -half.Y || min(min(v1.Y, v2.Y), v3.Y) > half.Y) ||
+		(max(max(v1.Z, v2.Z), v3.Z) < -half.Z || min(min(v1.Z, v2.Z), v3.Z) > half.Z) {
+		return false
+	}
+
+	// Triangle normal test
+	cross := Vertex{
+		X: e0.Y*e1.Z - e0.Z*e1.Y,
+		Y: e0.Z*e1.X - e0.X*e1.Z,
+		Z: e0.X*e1.Y - e0.Y*e1.X,
+	}
+
+	// Skip near-zero so math doesn't get mad, part 2 (degen triangles kekw)
+	if cross.X*cross.X+cross.Y*cross.Y+cross.Z*cross.Z < 1e-12 {
+		return false
+	}
+
+	q1 := cross.X*v1.X + cross.Y*v1.Y + cross.Z*v1.Z
+	q2 := cross.X*v2.X + cross.Y*v2.Y + cross.Z*v2.Z
+	q3 := cross.X*v3.X + cross.Y*v3.Y + cross.Z*v3.Z
+
+	r := half.X*math.Abs(cross.X) + half.Y*math.Abs(cross.Y) + half.Z*math.Abs(cross.Z)
+
+	if max(max(q1, q2), q3) < -r || min(min(q1, q2), q3) > r {
+		return false
+	}
+
+	return true
 }
 
 func CubesToOBJ(cubes []Cube) *Object {

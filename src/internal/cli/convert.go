@@ -29,7 +29,7 @@ func Convert(args []string) {
 
 	basepath, err := os.Getwd()
 	if err != nil {
-		println("Error getting working directory:", err)
+		println("Error getting working directory:", err.Error())
 		return
 	}
 
@@ -37,31 +37,31 @@ func Convert(args []string) {
 
 	res, err := obj.ReadFile(inputFile)
 	if err != nil {
-		println("Error reading input file:", err)
+		println("Error reading input file:", err.Error())
 		return
 	}
 
 	object, err := obj.ParseOBJ(res)
 	if err != nil {
-		println("Error parsing OBJ content:", err)
+		println("Error parsing OBJ content:", err.Error())
 		return
 	}
 
 	box, err := object.GetBoundingBox()
 	if err != nil {
-		println("Error getting bounding box:", err)
+		println("Error getting bounding box:", err.Error())
 		return
 	}
 
 	rootCube, err := box.GetRootCube()
 	if err != nil {
-		println("Error getting root cube:", err)
+		println("Error getting root cube:", err.Error())
 		return
 	}
 
 	cubes, err := rootCube.SubDivideCube(maxDepth, object)
 	if err != nil {
-		println("Error subdividing cube:", err)
+		println("Error subdividing cube:", err.Error())
 		return
 	}
 
@@ -69,7 +69,7 @@ func Convert(args []string) {
 
 	err = obj.WriteOBJToFile(outputFile, resultObject)
 	if err != nil {
-		println("Error writing output file:", err)
+		println("Error writing output file:", err.Error())
 		return
 	}
 

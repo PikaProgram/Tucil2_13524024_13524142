@@ -64,15 +64,27 @@ func ParseOBJ(content string) (*model.Object, error) {
 		switch prefix {
 		case "v":
 			if len(args) >= 3 {
-				x, _ := strconv.ParseFloat(args[0], 64)
-				y, _ := strconv.ParseFloat(args[1], 64)
-				z, _ := strconv.ParseFloat(args[2], 64)
+				x, err := strconv.ParseFloat(args[0], 64)
+				if err != nil {
+					return nil, err
+				}
+				y, err := strconv.ParseFloat(args[1], 64)
+				if err != nil {
+					return nil, err
+				}
+				z, err := strconv.ParseFloat(args[2], 64)
+				if err != nil {
+					return nil, err
+				}
 				object.Vertexes = append(object.Vertexes, model.Vertex{X: x, Y: y, Z: z})
 			}
 		case "f":
 			face := model.Face{Vertexes: [3]int{}}
 			for _, part := range args {
-				vertexIndex, _ := strconv.Atoi(part)
+				vertexIndex, err := strconv.Atoi(part)
+				if err != nil {
+					return nil, err
+				}
 				if vertexIndex > 0 && vertexIndex <= len(object.Vertexes) {
 					for i := range 3 {
 						if face.Vertexes[i] == 0 {
