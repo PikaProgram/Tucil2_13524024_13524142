@@ -2,10 +2,12 @@ package obj
 
 import (
 	"bufio"
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"tucil/src/internal/model"
 )
 
 // ReadFile reads the content of a file given its path and returns it as a string.
@@ -40,11 +42,11 @@ func ReadFile(filePath string) (string, error) {
 
 // ParseOBJ takes the content of an OBJ file as a string and parses it into an Object struct.
 // Only read vertex and face data, ignore other lines.
-func ParseOBJ(content string) (*Object, error) {
+func ParseOBJ(content string) (*model.Object, error) {
 	scanner := bufio.NewScanner(strings.NewReader(content))
-	object := &Object{
-		Vertices: []Vertice{},
-		Faces:    []Face{},
+	object := &model.Object{
+		Faces:    []model.Face{},
+		Vertexes: []model.Vertex{},
 	}
 
 	for scanner.Scan() {
@@ -58,23 +60,42 @@ func ParseOBJ(content string) (*Object, error) {
 			continue
 		}
 
-		switch parts[0] {
+		prefix, args := parts[0], parts[1:]
+
+		switch prefix {
 		case "v":
-			if len(parts) >= 4 {
-				x, _ := strconv.ParseFloat(parts[1], 64)
-				y, _ := strconv.ParseFloat(parts[2], 64)
-				z, _ := strconv.ParseFloat(parts[3], 64)
-				object.Vertices = append(object.Vertices, Vertice{X: x, Y: y, Z: z})
+			if len(args) >= 3 {
+				x, _ := strconv.ParseFloat(args[0], 64)
+				y, _ := strconv.ParseFloat(args[1], 64)
+				z, _ := strconv.ParseFloat(args[2], 64)
+				object.Vertexes = append(object.Vertexes, model.Vertex{X: x, Y: y, Z: z})
 			}
 		case "f":
-			face := Face{Vertices: []Vertice{}}
-			for _, part := range parts[1:] {
+			face := model.Face{Vertexes: [3]int{}}
+			for _, part := range args {
 				vertexIndex, _ := strconv.Atoi(part)
-				if vertexIndex > 0 && vertexIndex <= len(object.Vertices) {
-					face.Vertices = append(face.Vertices, object.Vertices[vertexIndex-1])
+				if vertexIndex > 0 && vertexIndex <= len(object.Vertexes) {
+					for i := range 3 {
+						if face.Vertexes[i] == 0 {
+							face.Vertexes[i] = vertexIndex - 1
+							break
+						}
+					}
 				}
 			}
 			object.Faces = append(object.Faces, face)
+		}
+	}
+
+	if len(object.Faces) == 0 || len(object.Vertexes) == 0 {
+		return nil, errors.New("no valid faces or vertexes found in OBJ content")
+	}
+
+	for i := range object.Faces {
+		for j := range object.Faces[i].Vertexes {
+			if object.Faces[i].Vertexes[j] < 0 || object.Faces[i].Vertexes[j] >= len(object.Vertexes) {
+				return nil, errors.New("face vertex index out of bounds")
+			}
 		}
 	}
 
