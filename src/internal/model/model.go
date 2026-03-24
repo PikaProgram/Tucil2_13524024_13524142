@@ -27,30 +27,37 @@ type Cube struct {
 	Size float64
 }
 
+type OctreeCount struct {
+	NodesFormed map[int]int
+	NodesPruned map[int]int
+}
+
 func (o *Object) GetBoundingBox() (Box, error) {
 	if len(o.Vertexes) == 0 {
 		return Box{}, errors.New("object has no vertexes")
 	}
-
 	min := o.Vertexes[0]
 	max := o.Vertexes[0]
 
 	for _, v := range o.Vertexes {
-		for _, c := range []struct {
-			Min *float64
-			Max *float64
-			Val float64
-		}{
-			{Min: &min.X, Max: &max.X, Val: v.X},
-			{Min: &min.Y, Max: &max.Y, Val: v.Y},
-			{Min: &min.Z, Max: &max.Z, Val: v.Z},
-		} {
-			if c.Val < *c.Min {
-				*c.Min = c.Val
-			}
-			if c.Val > *c.Max {
-				*c.Max = c.Val
-			}
+		if min.X > v.X {
+			min.X = v.X
+		}
+		if min.Y > v.Y {
+			min.Y = v.Y
+		}
+		if min.Z > v.Z {
+			min.Z = v.Z
+		}
+
+		if max.X < v.X {
+			max.X = v.X
+		}
+		if max.Y < v.Y {
+			max.Y = v.Y
+		}
+		if max.Z < v.Z {
+			max.Z = v.Z
 		}
 	}
 
@@ -120,8 +127,10 @@ func (c *Cube) DivideCube() ([8]Cube, error) {
 	return cubes, nil
 }
 
-func (c *Cube) SubDivideCube(depth int, originalObject *Object) ([]Cube, error) {
-	if depth <= 0 {
+func (c *Cube) SubDivideCube(currentDepth int, maxDepth int, originalObject *Object, stats *OctreeCount) ([]Cube, error) {
+	stats.NodesFormed[currentDepth]++
+
+	if currentDepth >= maxDepth {
 		return []Cube{*c}, nil
 	}
 
@@ -133,11 +142,13 @@ func (c *Cube) SubDivideCube(depth int, originalObject *Object) ([]Cube, error) 
 	var result []Cube
 	for _, cube := range cubes {
 		if cube.IntersectsObject(originalObject) {
-			subCubes, err := cube.SubDivideCube(depth-1, originalObject)
+			subCubes, err := cube.SubDivideCube(currentDepth+1, maxDepth, originalObject, stats)
 			if err != nil {
 				return nil, err
 			}
 			result = append(result, subCubes...)
+		} else {
+			stats.NodesPruned[currentDepth+1]++
 		}
 	}
 
