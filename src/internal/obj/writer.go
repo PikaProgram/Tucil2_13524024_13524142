@@ -25,7 +25,7 @@ func WriteOBJToFile(filename string, object *model.Object) error {
 	for _, f := range object.Faces {
 		sb.WriteString("f ")
 		for _, idx := range f.Vertexes {
-			sb.WriteString(strconv.Itoa(idx + 1)) // OBJ is 1-indexed
+			sb.WriteString(strconv.Itoa(int(idx) + 1)) // OBJ is 1-indexed
 			sb.WriteString(" ")
 		}
 		sb.WriteString("\n")

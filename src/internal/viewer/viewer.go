@@ -8,7 +8,6 @@ import (
 	"tucil/src/internal/obj"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 type Simulation struct {
@@ -29,7 +28,7 @@ func (g *Simulation) GetObj(filename string) error {
 		return err
 	}
 	g.obj = *object
-	g.distance = 100.0
+	g.distance = 35.0
 	return nil
 }
 
@@ -56,7 +55,6 @@ func (g *Simulation) Update() error {
 }
 
 func (g *Simulation) Draw(screen *ebiten.Image) {
-	green := color.RGBA{0, 255, 0, 255}
 	matrix := Identity()
 	matrix = matrix.Multiply(Perspective(0.1, 1000.0))
 	matrix = matrix.Multiply(Translation(0, 0, -g.distance))
@@ -64,6 +62,15 @@ func (g *Simulation) Draw(screen *ebiten.Image) {
 	matrix = matrix.Multiply(RotationY(g.rotationYRad))
 	var wg sync.WaitGroup
 	var mu sync.Mutex
+
+	whiteSubImage := ebiten.NewImage(1, 1)
+	whiteSubImage.Fill(color.White)
+
+	var batchedVertices [][]ebiten.Vertex
+	var batchedIndices [][]uint16
+	var currentV []ebiten.Vertex
+	var currentI []uint16
+	var baseIndex uint16 = 0
 
 	for _, face := range g.obj.Faces {
 		wg.Add(1)
@@ -77,22 +84,37 @@ func (g *Simulation) Draw(screen *ebiten.Image) {
 			x2, y2 := 300+(v2.X*300), 300-(v2.Y*300)
 			x3, y3 := 300+(v3.X*300), 300-(v3.Y*300)
 
-			//Safeguard for excessive distance
-			if !(x1 > -5000 && x1 < 5000 && y1 > -5000 && y1 < 5000 &&
-				x2 > -5000 && x2 < 5000 && y2 > -5000 && y2 < 5000 &&
-				x3 > -5000 && x3 < 5000 && y3 > -5000 && y3 < 5000) {
-				return
-			}
-
 			mu.Lock()
 			defer mu.Unlock()
-			vector.StrokeLine(screen, float32(x1), float32(y1), float32(x2), float32(y2), 2, green, true)
-			vector.StrokeLine(screen, float32(x2), float32(y2), float32(x3), float32(y3), 2, green, true)
-			vector.StrokeLine(screen, float32(x3), float32(y3), float32(x1), float32(y1), 2, green, true)
+
+			if baseIndex >= 65532 {
+				batchedVertices = append(batchedVertices, currentV)
+				batchedIndices = append(batchedIndices, currentI)
+				currentV = nil
+				currentI = nil
+				baseIndex = 0
+			}
+
+			currentV = append(currentV,
+				ebiten.Vertex{DstX: float32(x1), DstY: float32(y1), ColorR: 0, ColorG: 1, ColorB: 0, ColorA: 1},
+				ebiten.Vertex{DstX: float32(x2), DstY: float32(y2), ColorR: 0, ColorG: 1, ColorB: 0, ColorA: 1},
+				ebiten.Vertex{DstX: float32(x3), DstY: float32(y3), ColorR: 0, ColorG: 1, ColorB: 0, ColorA: 1},
+			)
+			currentI = append(currentI, baseIndex, baseIndex+1, baseIndex+2)
+			baseIndex += 3
 		}(matrix, face)
 
 	}
 	wg.Wait()
+
+	if len(currentV) > 0 {
+		batchedVertices = append(batchedVertices, currentV)
+		batchedIndices = append(batchedIndices, currentI)
+	}
+
+	for i := range batchedVertices {
+		screen.DrawTriangles(batchedVertices[i], batchedIndices[i], whiteSubImage, nil)
+	}
 }
 
 // Must have this function for the ebiten library
