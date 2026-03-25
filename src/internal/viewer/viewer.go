@@ -3,11 +3,14 @@ package viewer
 import (
 	"image/color"
 	"log"
+	"math"
 	"sync"
 	"tucil/src/internal/model"
 	"tucil/src/internal/obj"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type Simulation struct {
@@ -17,8 +20,9 @@ type Simulation struct {
 	rotationXRad float64
 	rotationYRad float64
 
-	prevMouseX int
-	prevMouseY int
+	prevMouseX     int
+	prevMouseY     int
+	cullingEnabled bool
 }
 
 func (g *Simulation) GetObj(filename string) error {
@@ -47,7 +51,9 @@ func (g *Simulation) Update() error {
 		g.rotationYRad += float64(deltaX) * 0.01
 		g.rotationXRad += float64(deltaY) * 0.01
 	}
-
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		g.cullingEnabled = !g.cullingEnabled
+	}
 	g.prevMouseX = cx
 	g.prevMouseY = cy
 
@@ -84,6 +90,30 @@ func (g *Simulation) Draw(screen *ebiten.Image) {
 			x2, y2 := 300+(v2.X*300), 300-(v2.Y*300)
 			x3, y3 := 300+(v3.X*300), 300-(v3.Y*300)
 
+			if g.cullingEnabled {
+				//This culling algorithm is VERY funny and VERY buggy...
+				rotY := math.Mod(math.Abs(g.rotationYRad), 2*math.Pi)
+				isLookingAtBack := rotY > math.Pi/2 && rotY < 3*math.Pi/2
+
+				cross := (x2-x1)*(y3-y1) - (y2-y1)*(x3-x1)
+
+				if isLookingAtBack {
+					if cross < 0 {
+						return
+					}
+				} else {
+					if cross > 0 {
+						return
+					}
+				}
+			}
+
+			if !(x1 > -5000 && x1 < 5000 && y1 > -5000 && y1 < 5000 &&
+				x2 > -5000 && x2 < 5000 && y2 > -5000 && y2 < 5000 &&
+				x3 > -5000 && x3 < 5000 && y3 > -5000 && y3 < 5000) {
+				return
+			}
+
 			mu.Lock()
 			defer mu.Unlock()
 
@@ -115,6 +145,11 @@ func (g *Simulation) Draw(screen *ebiten.Image) {
 	for i := range batchedVertices {
 		screen.DrawTriangles(batchedVertices[i], batchedIndices[i], whiteSubImage, nil)
 	}
+	status := "OFF"
+	if g.cullingEnabled {
+		status = "ON (visual glitches in some angles but improves performance)"
+	}
+	ebitenutil.DebugPrint(screen, "Backface Culling (Press C): "+status)
 }
 
 // Must have this function for the ebiten library
