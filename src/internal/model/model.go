@@ -1,9 +1,9 @@
 package model
 
 import (
-	"sync"
 	"errors"
 	"math"
+	"sync"
 )
 
 type Vertex struct {
@@ -29,16 +29,17 @@ type Cube struct {
 }
 
 type OctreeCount struct {
-	mu sync.Mutex
+	mu          sync.Mutex
 	NodesFormed map[int]int
 	NodesPruned map[int]int
 }
-func (stats *OctreeCount) addNodesFormed(depth int){
+
+func (stats *OctreeCount) addNodesFormed(depth int) {
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
 	stats.NodesFormed[depth]++
 }
-func (stats *OctreeCount) addNodesPruned(depth int){
+func (stats *OctreeCount) addNodesPruned(depth int) {
 	stats.mu.Lock()
 	defer stats.mu.Unlock()
 	stats.NodesPruned[depth]++
@@ -52,13 +53,25 @@ func (o *Object) GetBoundingBox() (Box, error) {
 	max := o.Vertexes[0]
 
 	for _, v := range o.Vertexes {
-		if min.X > v.X {min.X = v.X}
-		if min.Y > v.Y {min.Y = v.Y}
-		if min.Z > v.Z {min.Z = v.Z}
+		if min.X > v.X {
+			min.X = v.X
+		}
+		if min.Y > v.Y {
+			min.Y = v.Y
+		}
+		if min.Z > v.Z {
+			min.Z = v.Z
+		}
 
-		if max.X < v.X {max.X = v.X}
-		if max.Y < v.Y {max.Y = v.Y}
-		if max.Z < v.Z {max.Z = v.Z}
+		if max.X < v.X {
+			max.X = v.X
+		}
+		if max.Y < v.Y {
+			max.Y = v.Y
+		}
+		if max.Z < v.Z {
+			max.Z = v.Z
+		}
 	}
 
 	center := Vertex{
@@ -147,21 +160,21 @@ func (c *Cube) SubDivideCube(currentDepth int, maxDepth int, originalObject *Obj
 	for _, cube := range cubes {
 		if cube.IntersectsObject(originalObject) {
 			wg.Add(1)
-			go func(c Cube){
+			go func(c Cube) {
 				defer wg.Done()
 				subCubes, err := c.SubDivideCube(currentDepth+1, maxDepth, originalObject, stats)
 				if err == nil {
 					mu.Lock()
 					result = append(result, subCubes...)
 					mu.Unlock()
-				}else{
+				} else {
 					mu.Lock()
 					sharedError = err
 					mu.Unlock()
 				}
 			}(cube)
 		} else {
-			stats.addNodesPruned(currentDepth+1)
+			stats.addNodesPruned(currentDepth + 1)
 		}
 	}
 	wg.Wait()

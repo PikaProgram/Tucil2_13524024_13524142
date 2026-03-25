@@ -38,15 +38,9 @@ func Convert(args []string) {
 
 	inputFile, outputFile = basepath+"/"+inputFile, basepath+"/"+outputFile
 
-	res, err := obj.ReadFile(inputFile)
+	object, err := obj.ParseOBJ(inputFile)
 	if err != nil {
-		fmt.Println("Error reading input file:", err.Error())
-		return
-	}
-
-	object, err := obj.ParseOBJ(res)
-	if err != nil {
-		fmt.Println("Error parsing OBJ content:", err.Error())
+		fmt.Println("Error parsing OBJ file:", err.Error())
 		return
 	}
 

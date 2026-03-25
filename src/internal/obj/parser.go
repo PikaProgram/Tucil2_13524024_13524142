@@ -10,6 +10,7 @@ import (
 )
 
 // ReadFile reads the content of a file given its path and returns it as a string.
+// Obsolete
 func ReadFile(filePath string) (string, error) {
 	f, err := os.Open(filePath)
 
@@ -37,8 +38,14 @@ func ReadFile(filePath string) (string, error) {
 
 // ParseOBJ takes the content of an OBJ file as a string and parses it into an Object struct.
 // Only read vertex and face data, ignore other lines.
-func ParseOBJ(content string) (*model.Object, error) {
-	scanner := bufio.NewScanner(strings.NewReader(content))
+func ParseOBJ(filePath string) (*model.Object, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+
 	object := &model.Object{
 		Faces:    []model.Face{},
 		Vertexes: []model.Vertex{},
