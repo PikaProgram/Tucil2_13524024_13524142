@@ -174,7 +174,7 @@ func (g *Simulation) Draw(screen *ebiten.Image) {
 	if g.cullingEnabled {
 		status = "ON (visual glitches in some angles but improves performance)"
 	}
-	ebitenutil.DebugPrint(screen, "Backface Culling (Press C): "+status)
+	ebitenutil.DebugPrint(screen, "Backface Culling (Press C): "+status+"\nLeft Click + Drag: Rotate the model (X and Y axis)\nMouse Wheel: Zoom in / Zoom out")
 }
 
 // Must have this function for the ebiten library
