@@ -59,3 +59,6 @@ Viewer Controls:
 
 
 
+This project was made and managed by:
+- Billie Bhaskara Wibawa (13524024)
+- Rasyad Satyatma (13524142)
